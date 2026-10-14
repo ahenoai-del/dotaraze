@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+*.tsbuildinfo
+*.pyc
+.env
+*.db
+.swarm_run/
+playwright-report/
+test-results/
+*.log
+.runtime-tmp/
+.local/
+.npm-cache/
