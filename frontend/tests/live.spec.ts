@@ -23,3 +23,21 @@ test('real backend, PostgreSQL and OpenDota reach the dashboard', async ({ page,
   expect(errors).toEqual([]);
   await page.screenshot({ path: test.info().outputPath('real-dashboard.png'), fullPage: true });
 });
+
+test('real Meta Lab uses OpenDota and remains available without login', async ({ page, request }) => {
+  test.skip(process.env.RUN_LIVE_TESTS !== '1', 'Optional live integration: RUN_LIVE_TESTS=1 required.');
+  test.setTimeout(90_000);
+  const api = process.env.LIVE_API_URL || 'http://localhost:8000/api';
+  const response = await request.get(`${api}/meta/heroes`, { timeout: 50_000 });
+  expect(response.ok()).toBe(true);
+  const data = await response.json();
+  expect(data.source).toBe('OpenDota /heroStats');
+  expect(data.heroes.length).toBeGreaterThan(10);
+  expect(data.total_picks).toBeGreaterThan(0);
+  expect(data.heroes.every((hero: { winrate: number | null }) => hero.winrate == null || hero.winrate >= 0 && hero.winrate <= 100)).toBe(true);
+  await page.goto('/meta');
+  await expect(page.locator('.meta-summary .metric-card').first().locator('strong')).toHaveText(data.total_picks.toLocaleString('ru-RU'), { timeout: 50_000 });
+  await expect(page.locator('tbody tr').first()).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Паблики' })).toHaveAttribute('aria-selected', 'true');
+  await page.screenshot({ path: test.info().outputPath('real-meta-lab.png'), fullPage: true });
+});

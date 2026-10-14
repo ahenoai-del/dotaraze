@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api import auth, players
+from app.api import auth, players, meta
 from app.core.config import Settings, get_settings
 from app.core.database import SessionLocal
 from app.core.errors import ServiceError
@@ -87,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(players.router, prefix='/api')
     app.include_router(auth.router, prefix='/api')
+    app.include_router(meta.router, prefix='/api')
     if settings.static_dir is not None:
         if not (settings.static_dir / 'index.html').is_file():
             raise RuntimeError('STATIC_DIR must contain a built frontend index.html')

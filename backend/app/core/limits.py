@@ -47,6 +47,11 @@ class ResponseCache:
         self.lock = asyncio.Lock()
 
     async def get_or_load(self, key, loader):
+        # A slow unrelated miss must not block already cached Dashboard/Meta data.
+        cached = self.entries.get(key)
+        if cached and cached[0] > time.monotonic():
+            self.entries.move_to_end(key)
+            return cached[1]
         # Coalesce loads and bound upstream concurrency for the single-process deployment.
         async with self.lock:
             cached = self.entries.get(key)

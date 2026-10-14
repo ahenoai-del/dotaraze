@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ArrowUpRight, Check, CircleAlert, Clock3, ExternalLink, Gamepad2, LogIn, LogOut, RefreshCw, Search, ShieldCheck, Sparkles, Swords, Trash2, X } from 'lucide-react';
@@ -24,6 +24,7 @@ export function DashboardPage() {
   const playerId = params.get('player');
   const [input, setInput] = useState(playerId || '');
   const [validation, setValidation] = useState('');
+  useEffect(() => { setInput(playerId || ''); setValidation(''); }, [playerId, demo]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const queryClient = useQueryClient();
   const session = useQuery({ queryKey: ['session'], queryFn: api.me, retry: false, staleTime: 60_000 });

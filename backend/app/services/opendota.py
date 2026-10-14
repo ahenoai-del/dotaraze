@@ -30,7 +30,7 @@ class OpenDota:
                     raise ServiceError('profile_unavailable', 'Публичный профиль недоступен в OpenDota.', 404)
                 response.raise_for_status()
                 return response.json()
-            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError, ValueError) as exc:
+            except (httpx.TransportError, httpx.HTTPStatusError, ValueError) as exc:
                 if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
                     break
                 if attempt < 2:
@@ -50,6 +50,9 @@ class OpenDota:
                 raise ServiceError('upstream_format', 'OpenDota вернул неожиданный формат данных.')
             try:
                 matches = [normalize_match(row) for row in rows]
+                if len({match.match_id for match in matches}) != len(matches):
+                    raise ValueError('Duplicate upstream matches')
+                matches = sorted(matches, key=lambda match: match.start_time, reverse=True)[:100]
                 result = Dashboard(
                     profile=Profile(account_id=player_id, name=profile['profile'].get('personaname') or f'Игрок {player_id}',
                                     avatar=profile['profile'].get('avatarfull'), rank_tier=profile.get('rank_tier')),
@@ -57,16 +60,38 @@ class OpenDota:
                     fetched_at=datetime.now(timezone.utc).isoformat(),
                     notice='Нет доступных матчей. История может быть скрыта или ещё не собрана OpenDota.' if not matches else None,
                 )
-            except (ValidationError, TypeError, KeyError) as exc:
+            except (ValidationError, ValueError, TypeError, KeyError) as exc:
                 raise ServiceError('upstream_format', 'OpenDota вернул неполные данные. Повторите позже.') from exc
             return result
         return await self.cache.get_or_load(f'player:{player_id}', load)
 
     async def heroes(self):
+        snapshot = await self.hero_stats_snapshot()
+        try:
+            for row in snapshot['rows']:
+                if (type(row.get('id')) is not int or row['id'] <= 0
+                        or not isinstance(row.get('localized_name'), str) or not row['localized_name']
+                        or not isinstance(row.get('img'), str) or not row['img'].startswith('/apps/dota2/')):
+                    raise ValueError('Invalid hero metadata')
+            if len({row['id'] for row in snapshot['rows']}) != len(snapshot['rows']):
+                raise ValueError('Duplicate hero IDs')
+            return [{'id': r['id'], 'name': r['localized_name'],
+                     'image': 'https://cdn.cloudflare.steamstatic.com' + r['img']} for r in snapshot['rows']]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ServiceError('upstream_format', 'Справочник героев временно недоступен.') from exc
+
+    async def hero_stats_snapshot(self):
         async def load():
             rows = await self.get('/heroStats')
-            if not isinstance(rows, list):
+            if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
                 raise ServiceError('upstream_format', 'Справочник героев временно недоступен.')
-            return [{'id': r['id'], 'name': r['localized_name'],
-                     'image': 'https://cdn.cloudflare.steamstatic.com' + r['img']} for r in rows]
-        return await self.cache.get_or_load('heroes', load)
+            return {'rows': rows, 'fetched_at': datetime.now(timezone.utc).isoformat()}
+        return await self.cache.get_or_load('hero_stats', load)
+
+    async def patch_snapshot(self):
+        async def load():
+            rows = await self.get('/constants/patch')
+            if not isinstance(rows, list):
+                raise ServiceError('upstream_format', 'Справочник патчей временно недоступен.')
+            return {'rows': rows, 'fetched_at': datetime.now(timezone.utc).isoformat()}
+        return await self.cache.get_or_load('patches', load)
