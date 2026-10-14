@@ -63,10 +63,25 @@ class OpenDota:
         return await self.cache.get_or_load(f'player:{player_id}', load)
 
     async def heroes(self):
+        snapshot = await self.hero_stats_snapshot()
+        try:
+            return [{'id': r['id'], 'name': r['localized_name'],
+                     'image': 'https://cdn.cloudflare.steamstatic.com' + r['img']} for r in snapshot['rows']]
+        except (KeyError, TypeError) as exc:
+            raise ServiceError('upstream_format', 'Справочник героев временно недоступен.') from exc
+
+    async def hero_stats_snapshot(self):
         async def load():
             rows = await self.get('/heroStats')
-            if not isinstance(rows, list):
+            if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
                 raise ServiceError('upstream_format', 'Справочник героев временно недоступен.')
-            return [{'id': r['id'], 'name': r['localized_name'],
-                     'image': 'https://cdn.cloudflare.steamstatic.com' + r['img']} for r in rows]
-        return await self.cache.get_or_load('heroes', load)
+            return {'rows': rows, 'fetched_at': datetime.now(timezone.utc).isoformat()}
+        return await self.cache.get_or_load('hero_stats', load)
+
+    async def patch_snapshot(self):
+        async def load():
+            rows = await self.get('/constants/patch')
+            if not isinstance(rows, list):
+                raise ServiceError('upstream_format', 'Справочник патчей временно недоступен.')
+            return {'rows': rows, 'fetched_at': datetime.now(timezone.utc).isoformat()}
+        return await self.cache.get_or_load('patches', load)

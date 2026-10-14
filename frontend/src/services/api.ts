@@ -1,4 +1,5 @@
 import type { DashboardData, Hero, Session } from '../types/player';
+import type { MetaMode, MetaSnapshot, PatchCatalog } from '../types/meta';
 
 export const API_URL = import.meta.env.VITE_API_URL || '/api';
 export class ApiError extends Error {
@@ -23,4 +24,6 @@ export const api = {
   me: () => request<Session>('/auth/me'),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   deleteAccount: () => request<void>('/auth/account', { method: 'DELETE' }),
+  meta: (mode: MetaMode, bracket: string, signal?: AbortSignal) => request<MetaSnapshot>(`/meta/heroes?${new URLSearchParams({ mode, bracket })}`, { signal }),
+  patches: (signal?: AbortSignal) => request<PatchCatalog>('/meta/patches', { signal }),
 };

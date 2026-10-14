@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Button } from './ui/button';
 
 const future = [
-  { label: 'Meta Lab', icon: FlaskConical }, { label: 'AI Coach', icon: Sparkles },
+  { label: 'AI Coach', icon: Sparkles },
   { label: 'Challenges', icon: Trophy }, { label: 'Community', icon: Users },
 ];
 export function Logo() {
@@ -21,6 +21,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="nav-label">ОБЗОР</div>
       <nav aria-label="Основная навигация">
         <NavLink to="/dashboard" className="nav-item" onClick={() => setOpen(false)}><LayoutDashboard size={19}/>Dashboard<span className="nav-dot"/></NavLink>
+        <NavLink to="/meta" className="nav-item" onClick={() => setOpen(false)}><FlaskConical size={19}/>Meta Lab<span className="nav-dot"/></NavLink>
         {future.map(({ label, icon: Icon }) => <div key={label} className="nav-item future" aria-disabled="true"><Icon size={19}/>{label}<span className="soon">Скоро</span></div>)}
       </nav>
       <div className="sidebar-bottom">
