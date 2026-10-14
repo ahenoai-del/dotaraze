@@ -47,6 +47,8 @@
 
 ## Проверки
 
+Изменения: [PR #1](https://github.com/ahenoai-del/dotaraze/pull/1). [CI 38636959596](https://github.com/ahenoai-del/dotaraze/actions/runs/38636959596) — success: 72 backend tests, 16 browser tests (4 live skipped), production build, оба Docker-образа и запуск объединённого контейнера с PostgreSQL. Отдельно локально против собранного приложения: все 20 browser tests прошли, включая четыре live-теста.
+
 - Backend: **72 passed** с настоящей PostgreSQL (`RUN_POSTGRES_TESTS=1`), включая новые проверки формул, Wilson, пустых/неизвестных значений, режимов, рангов, дубликатов и общего snapshot cache. Известное предупреждение Starlette/HTTPX сохраняется.
 - Браузер: **20 passed** с `RUN_LIVE_TESTS=1`: Dashboard и Meta Lab, desktop/mobile, четыре live-проверки настоящего OpenDota. Стандартный CI запускает 16 тестов, четыре live-проверки намеренно пропускаются.
 - Дополнительно после проверки взаимодействия с графиком: шесть Meta Lab browser-тестов прошли, включая открытие диалога по точке и фильтр универсальных героев.

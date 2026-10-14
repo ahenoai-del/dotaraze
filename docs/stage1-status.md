@@ -110,3 +110,5 @@ Meta Lab, AI Coach, Challenges, Community, Telegram и Pro оставлены в
 - AI Coach, Challenges, Community, Telegram и Pro в этой итерации не реализованы. Сравнение патчей и позиционная мета требуют дополнительных данных; интерфейс их не имитирует.
 
 Открыть: `http://localhost:8001/meta` или `http://localhost:5173/meta`. Методика и границы: [Meta Lab](meta-lab.md).
+
+Изменения опубликованы в ветке `codex/meta-lab`, [PR #1](https://github.com/ahenoai-del/dotaraze/pull/1), без слияния в main. [GitHub Actions 38636959596](https://github.com/ahenoai-del/dotaraze/actions/runs/38636959596) завершился успешно: backend **72 passed**, schema check без новых операций; frontend production build и **16 passed, 4 skipped** (внешние live-тесты отключены в CI); собраны оба Docker-образа, объединённый контейнер запущен с PostgreSQL, health сообщил connected. Полный локальный запуск против собранного приложения на порту 8001 подтвердил **20 passed**, включая четыре live-теста.
