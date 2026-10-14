@@ -1,4 +1,8 @@
-from pydantic import BaseModel
+from typing import Annotated
+
+from pydantic import BaseModel, Field
+
+NonNegative = Annotated[int, Field(strict=True, ge=0)]
 
 
 class Profile(BaseModel):
@@ -9,17 +13,17 @@ class Profile(BaseModel):
 
 
 class Match(BaseModel):
-    match_id: int
-    hero_id: int
-    start_time: int
-    duration: int
+    match_id: Annotated[int, Field(strict=True, gt=0)]
+    hero_id: NonNegative
+    start_time: Annotated[int, Field(strict=True, ge=0, le=253402300799)]
+    duration: NonNegative
     won: bool | None
-    kills: int | None = None
-    deaths: int | None = None
-    assists: int | None = None
-    gold_per_min: int | None = None
-    xp_per_min: int | None = None
-    lobby_type: int | None = None
+    kills: NonNegative | None = None
+    deaths: NonNegative | None = None
+    assists: NonNegative | None = None
+    gold_per_min: NonNegative | None = None
+    xp_per_min: NonNegative | None = None
+    lobby_type: NonNegative | None = None
 
 
 class Summary(BaseModel):

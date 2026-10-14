@@ -22,6 +22,11 @@ def test_unknown_result_is_not_a_loss():
     assert stats.winrate == 100
 
 
+@pytest.mark.parametrize('slot', [True, -1, 5, 127, 133, 256, '0', None])
+def test_invalid_or_spectator_slots_have_unknown_result(slot):
+    assert match(player_slot=slot).won is None
+
+
 def test_zero_deaths_missing_metrics_and_real_zero():
     stats = summarize([match(), match(match_id=2, kills=2, deaths=2, assists=4, gold_per_min=None, xp_per_min=None)])
     assert stats.kda == 9  # mean(15 / max(1, 0), 6 / 2)

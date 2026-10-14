@@ -86,3 +86,19 @@ test('upstream failure is not replaced by demo statistics; patches fail independ
   await expect(page.locator('tbody tr')).toHaveCount(14);
   await expect(page.getByText('Справочник сейчас недоступен. Мета работает независимо от него.')).toBeVisible();
 });
+
+test('hero pool synchronizes across browser tabs and handles corrupted storage', async ({ page, context }) => {
+  await page.addInitScript(() => localStorage.setItem('dotarise_hero_pool_v1', '[1,1,-2,true,9007199254740992]'));
+  await page.goto('/meta');
+  const pool = page.getByRole('region', { name: 'Сохранённый пул' });
+  await expect(pool).toContainText('1/5');
+  const other = await context.newPage();
+  // A same-origin tab updates storage without using this page's React state.
+  await other.goto('/privacy');
+  await other.evaluate(() => localStorage.setItem('dotarise_hero_pool_v1', '[2]'));
+  await expect(pool).toContainText('Juggernaut');
+  await expect(pool).not.toContainText('Anti-Mage');
+  await other.evaluate(() => localStorage.clear());
+  await expect(pool).toContainText('0/5');
+  await other.close();
+});

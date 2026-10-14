@@ -8,6 +8,8 @@
 
 По решению пользователя размещение на Railway отложено: разработка продолжается локально. После завершённого этапа 1 добавлена первая версия **Meta Lab**. Подготовленная схема Railway сохраняется: один web-сервис (frontend + API) и PostgreSQL Railway; Supabase не требуется. [Размещение](docs/deployment-railway.md) · [Meta Lab: возможности и методика](docs/meta-lab.md).
 
+Проверка существующей функциональности 15 октября 2026: исправлены навигация и фильтры Dashboard, мобильное меню, обработка повреждённых ответов OpenDota, блокировка кэша и синхронизация пула героев. **93 backend-теста прошли** с PostgreSQL; **33 браузерных теста прошли** против собранного приложения, включая четыре live-проверки OpenDota. Один сценарий мобильного меню пропущен на desktop намеренно. Production build успешен. [Подробный отчёт](docs/bug-audit-2026-10-15.md).
+
 **Стек:** React 19, TypeScript, Vite, Tailwind CSS 4, компонент Button по схеме shadcn/ui + Radix Slot, React Router, TanStack Query, Recharts; Python 3.12, FastAPI, Pydantic, SQLAlchemy 2, Alembic, HTTPX, PostgreSQL.
 
 ## Быстрый доступ в этой рабочей папке

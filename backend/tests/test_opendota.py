@@ -96,3 +96,83 @@ def test_rate_limit():
     assert limiter.allow('a') and limiter.allow('a')
     assert not limiter.allow('a')
     assert limiter.allow('b')
+
+
+@pytest.mark.parametrize('row', [None, [], 'bad', {'match_id': True},
+    dict(match_id=1, hero_id=2, start_time=100, duration=-1),
+    dict(match_id=1, hero_id=2, start_time=100, duration=60, kills=True),
+    dict(match_id=1, hero_id=2, start_time=10**20, duration=60)])
+def test_malformed_matches_fail_with_service_error(row):
+    async def scenario():
+        transport = httpx.MockTransport(lambda r: httpx.Response(200, json=[row] if r.url.path.endswith('matches') else {'profile': {'personaname': 'T'}}))
+        async with httpx.AsyncClient(transport=transport) as client:
+            with pytest.raises(ServiceError) as exc:
+                await OpenDota(client, Settings()).dashboard(1)
+            assert exc.value.code == 'upstream_format'
+    run(scenario())
+
+
+def test_sample_limit_and_duplicate_matches():
+    rows = [dict(match_id=i + 1, hero_id=2, start_time=i, duration=60) for i in range(105)]
+    async def scenario():
+        transport = httpx.MockTransport(lambda r: httpx.Response(200, json=rows if r.url.path.endswith('matches') else {'profile': {'personaname': 'T'}}))
+        async with httpx.AsyncClient(transport=transport) as client:
+            service = OpenDota(client, Settings())
+            data = await service.dashboard(1)
+            assert data.summary.matches == 100
+            assert data.matches[0].match_id == 105 and data.matches[-1].match_id == 6
+            rows.append(rows[0])
+            with pytest.raises(ServiceError) as exc:
+                await service.dashboard(2)
+            assert exc.value.code == 'upstream_format'
+    run(scenario())
+
+
+def test_protocol_errors_are_retried_and_reported():
+    calls = []
+    def handler(request):
+        calls.append(request)
+        raise httpx.RemoteProtocolError('Disconnected')
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            with pytest.raises(ServiceError) as exc:
+                await OpenDota(client, Settings()).dashboard(1)
+            assert exc.value.code == 'upstream_unavailable' and len(calls) == 3
+    run(scenario())
+
+
+def test_cached_hits_do_not_wait_for_unrelated_slow_load_and_misses_coalesce():
+    async def scenario():
+        cache = ResponseCache(120)
+        started, release = asyncio.Event(), asyncio.Event()
+        calls = []
+        async def fast():
+            return 'cached'
+        async def slow():
+            calls.append(1)
+            started.set()
+            await release.wait()
+            return 'loaded'
+        await cache.get_or_load('fast', fast)
+        task = asyncio.create_task(cache.get_or_load('slow', slow))
+        await started.wait()
+        try:
+            assert await asyncio.wait_for(cache.get_or_load('fast', fast), 0.5) == 'cached'
+            duplicate = asyncio.create_task(cache.get_or_load('slow', slow))
+        finally:
+            release.set()
+            await task
+        assert await duplicate == 'loaded' and len(calls) == 1
+    run(scenario())
+
+
+@pytest.mark.parametrize('row', [{'id': True, 'localized_name': 'X', 'img': '/apps/dota2/x.png'},
+    {'id': 1, 'localized_name': None, 'img': '/apps/dota2/x.png'},
+    {'id': 1, 'localized_name': 'X', 'img': 'invalid'}])
+def test_invalid_catalog_returns_controlled_error(row):
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=[row]))) as client:
+            with pytest.raises(ServiceError) as exc:
+                await OpenDota(client, Settings()).heroes()
+            assert exc.value.code == 'upstream_format'
+    run(scenario())

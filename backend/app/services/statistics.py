@@ -5,8 +5,11 @@ from app.schemas.player import HeroSummary, Match, Summary
 
 
 def normalize_match(row: dict) -> Match:
+    if not isinstance(row, dict):
+        raise ValueError('Invalid upstream match')
     slot, victory = row.get('player_slot'), row.get('radiant_win')
-    won = (slot < 128) == victory if isinstance(slot, int) and isinstance(victory, bool) else None
+    valid_slot = type(slot) is int and slot in (*range(5), *range(128, 133))
+    won = (slot < 128) == victory if valid_slot and isinstance(victory, bool) else None
     return Match(**{key: row.get(key) for key in Match.model_fields if key != 'won'}, won=won)
 
 

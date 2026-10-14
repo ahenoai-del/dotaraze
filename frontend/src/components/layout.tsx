@@ -1,6 +1,6 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { Activity, ArrowUpRight, ChevronRight, FlaskConical, LayoutDashboard, Menu, Shield, Sparkles, Swords, Trophy, Users, X } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from './ui/button';
 
 const future = [
@@ -12,10 +12,43 @@ export function Logo() {
 }
 export function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [mobile, setMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
+  const sidebar = useRef<HTMLElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)');
+    const resize = () => { setMobile(media.matches); if (!media.matches) setOpen(false); };
+    media.addEventListener('change', resize);
+    return () => media.removeEventListener('change', resize);
+  }, []);
+  useEffect(() => { setOpen(false); window.scrollTo(0, 0); }, [pathname]);
+  useEffect(() => {
+    if (!open || !mobile) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const links = () => Array.from(sidebar.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') || []).filter(node => node.getClientRects().length);
+    links()[0]?.focus();
+    function keydown(event: KeyboardEvent) {
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); }
+      if (event.key === 'Tab') {
+        const nodes = [menuButton.current!, ...links()];
+        const current = nodes.indexOf(document.activeElement as HTMLButtonElement);
+        event.preventDefault();
+        nodes[(current + (event.shiftKey ? -1 : 1) + nodes.length) % nodes.length]?.focus();
+      }
+    }
+    document.addEventListener('keydown', keydown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', keydown);
+      menuButton.current?.focus();
+    };
+  }, [open, mobile]);
   return <div className="app-shell">
-    <header className="mobile-header"><Logo/><Button variant="ghost" size="icon" aria-label={open ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X/> : <Menu/>}</Button></header>
-    {open && <button className="sidebar-scrim" aria-label="Закрыть меню" onClick={() => setOpen(false)}/>}
-    <aside className={`sidebar ${open ? 'is-open' : ''}`}>
+    <header className="mobile-header"><Logo/><Button ref={menuButton} variant="ghost" size="icon" aria-controls="main-sidebar" aria-label={open ? 'Закрыть меню' : 'Открыть меню'} aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X/> : <Menu/>}</Button></header>
+    {open && <button className="sidebar-scrim" tabIndex={-1} aria-label="Закрыть меню" onClick={() => setOpen(false)}/>}
+    <aside ref={sidebar} id="main-sidebar" inert={mobile && !open} className={`sidebar ${open ? 'is-open' : ''}`}>
       <Logo/>
       <div className="workspace"><span className="workspace-icon"><Activity size={17}/></span><span>Твоё пространство<small>Личный кабинет</small></span><ChevronRight size={14}/></div>
       <div className="nav-label">ОБЗОР</div>

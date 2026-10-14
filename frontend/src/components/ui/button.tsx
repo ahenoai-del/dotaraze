@@ -15,7 +15,7 @@ const buttonVariants = cva('inline-flex items-center justify-center gap-2 rounde
   defaultVariants: { variant: 'default', size: 'default' },
 });
 
-type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { asChild?: boolean };
+type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { asChild?: boolean; ref?: React.Ref<HTMLButtonElement> };
 export function Button({ className, variant, size, asChild = false, ...props }: Props) {
   const Comp = asChild ? Slot : 'button';
   return <Comp className={cn(buttonVariants({ variant, size, className }))} {...props} />;
