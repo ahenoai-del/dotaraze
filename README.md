@@ -1,5 +1,9 @@
 # DotaRise
 
+[![DotaRise checks](https://github.com/ahenoai-del/dotaraze/actions/workflows/ci.yml/badge.svg)](https://github.com/ahenoai-del/dotaraze/actions/workflows/ci.yml)
+
+Исходники: [ahenoai-del/dotaraze](https://github.com/ahenoai-del/dotaraze). Первая публикация этапа 1 проверена в [GitHub Actions](https://github.com/ahenoai-del/dotaraze/actions/runs/38630508818): backend, frontend и Docker container — success.
+
 Рабочая первая версия платформы аналитики Dota 2: публичный поиск игрока, Steam OpenID, до 100 последних доступных матчей, показатели, статистика героев и адаптивный Dashboard. Остальные продуктовые модули запланированы, но не реализованы.
 
 Продолжение приёмки этапа 1: подготовлена схема **один Railway web-сервис (frontend + API) и PostgreSQL Railway**. Supabase для неё не нужен. Конкретная конфигурация и действия для размещения: [docs/deployment-railway.md](docs/deployment-railway.md).
@@ -47,6 +51,13 @@
 Установите [Python 3.12](https://www.python.org/downloads/windows/), [Node.js LTS](https://nodejs.org/) (проверено на Node 22), [PostgreSQL](https://www.postgresql.org/download/windows/) (рекомендуется 16+) и [Git](https://git-scm.com/downloads/win). Альтернатива локальной установке PostgreSQL — Docker Desktop с Compose.
 
 Все команды ниже выполняются в PowerShell из корня репозитория, если не указан переход в другую папку. Используется `npm.cmd`, чтобы политика выполнения PowerShell не блокировала `npm.ps1`.
+
+Для установки на другом компьютере сначала получите исходники:
+
+```powershell
+git clone https://github.com/ahenoai-del/dotaraze.git
+Set-Location dotaraze
+```
 
 ```powershell
 py -3.12 --version
@@ -180,7 +191,15 @@ Remove-Item Env:RUN_LIVE_TESTS,Env:PLAYWRIGHT_BASE_URL,Env:LIVE_API_URL
 .\.venv\Scripts\python.exe scripts\probe-steam.py --origin http://localhost:8001
 ```
 
-Единый локальный запуск стандартных проверок из корня: `.\scripts\test.ps1`. В GitHub Actions предусмотрены сборка frontend, browser-тесты, PostgreSQL, миграции и backend-тесты; публикация workflow произойдёт только после отправки репозитория пользователем.
+Единый локальный запуск стандартных проверок из корня: `.\scripts\test.ps1`. В GitHub Actions выполняются сборка frontend, browser-тесты, PostgreSQL, миграции, backend-тесты, сборка двух Docker-образов и запуск объединённого контейнера. [Первый прогон](https://github.com/ahenoai-del/dotaraze/actions/runs/38630508818) завершился успешно: 56 backend-тестов, 10 browser-тестов, 2 opt-in live-теста намеренно пропущены в CI; ранее они прошли локально с настоящим OpenDota.
+
+Архив исходников без локальной БД, зависимостей, `.env` и посторонних файлов можно собрать из корня:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\package-release.py
+```
+
+Результат — `.local/releases/dotarise-stage1-source.zip` и manifest с SHA-256 каждого исходника. Скрипт использует allowlist проекта, проверяет пути, UTF-8 и известные маркеры секретов, затем проверяет CRC и хэши содержимого архива. Это архив исходников, не готовый Docker image. Не используйте `git add .` в общей папке: там остаются посторонние файлы пользователя.
 
 Фактические результаты проверки и оставшиеся ограничения: [docs/stage1-status.md](docs/stage1-status.md). Подробности расчётов и архитектуры: [docs/architecture.md](docs/architecture.md).
 
@@ -196,7 +215,7 @@ npm.cmd run preview
 
 Основной вариант: корневые `Dockerfile` и `railway.json` собирают frontend на Node 22, переносят только готовые файлы в Python 3.12 image и запускают FastAPI от непривилегированного пользователя. `preDeployCommand` применяет миграции перед запуском сервиса. Health endpoint исключён из пользовательского rate limit. `/dashboard` и `/privacy` поддерживают SPA fallback; отсутствующие API, assets и скрытые файлы не подменяются HTML. Хэшированные assets кэшируются, HTML перепроверяется, API не сохраняется в браузерном кэше.
 
-Инструкции с переменными, доменом, приёмкой и откатом: [docs/deployment-railway.md](docs/deployment-railway.md). Для отдельного backend остаются `backend/Dockerfile` и `backend/railway.json`; это альтернативная схема, а не второй обязательный сервис приложения. В обеих конфигурациях один worker/одна реплика. Docker/контейнеры и Railway в текущей среде не запускались: Docker и Railway CLI отсутствуют, Git remote не настроен. Подготовленные файлы не означают, что облачный деплой уже проверен.
+Инструкции с переменными, доменом, приёмкой и откатом: [docs/deployment-railway.md](docs/deployment-railway.md). Для отдельного backend остаются `backend/Dockerfile` и `backend/railway.json`; это альтернативная схема, а не второй обязательный сервис приложения. В обеих конфигурациях один worker/одна реплика. Docker отсутствует локально, но оба образа успешно собраны в GitHub Actions, объединённый контейнер запущен и проверен с PostgreSQL. Репозиторий опубликован, локальная ветка `codex/stage1` связана с `origin/main`. Railway ещё не развёрнут: интеграция найдена, её установка и подключение требуют действия пользователя. Проверка Docker в CI не заменяет проверку Railway HTTPS/ingress.
 
 Production env: `ENVIRONMENT=production`, `COOKIE_SECURE=true`, HTTPS URL frontend/backend, точный `CORS_ORIGINS`. Для cookie-авторизации используйте домены одного site, например `app.example.com` и `api.example.com`, либо reverse proxy `/api`; произвольные несвязанные домены будут ограничены SameSite=Lax. Настройте TLS, доверенные proxy, rate limit на edge и резервное копирование БД. Данные сессий не должны попадать в access-логи: предусмотренный запуск использует `--no-access-log`.
 
