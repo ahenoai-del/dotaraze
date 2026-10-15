@@ -1,5 +1,6 @@
 import type { DashboardData, Hero, Session } from '../types/player';
 import type { MetaMode, MetaSnapshot, PatchCatalog } from '../types/meta';
+import type { MatchDetail, MatchItem } from '../types/match';
 
 export const API_URL = import.meta.env.VITE_API_URL || '/api';
 export class ApiError extends Error {
@@ -28,6 +29,8 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
   }
 }
 export const api = {
+  match: (id: string, signal?: AbortSignal) => request<MatchDetail>(`/matches/${encodeURIComponent(id)}`, { signal }),
+  items: (signal?: AbortSignal) => request<MatchItem[]>('/match-items', { signal }),
   dashboard: (id: string, signal?: AbortSignal) => request<DashboardData>(`/players/${encodeURIComponent(id)}/dashboard`, { signal }),
   heroes: (signal?: AbortSignal) => request<Hero[]>('/heroes', { signal }),
   me: () => request<Session>('/auth/me'),

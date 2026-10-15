@@ -66,7 +66,7 @@ export function DashboardPage() {
         {heroes.isError && <div className="small-notice">Справочник героев недоступен. Показаны числовые ID. <button className="text-violet-400" onClick={() => heroes.refetch()}>Повторить</button></div>}
         <div className="analytics-grid"><ProgressChart matches={data.matches}/><HeroPool stats={data.heroes} heroes={heroes.data || []}/></div>
         <div className="insight-strip"><span className="insight-icon"><Sparkles size={22}/></span><div><strong>Осознанная игра начинается с данных</strong><p>Ищи закономерности в матчах и оценивай свой прогресс по доступным показателям.</p></div><span className="coming-feature">AI Coach <span>Скоро</span></span></div>
-        <MatchHistory key={`${demo}:${id}`} matches={data.matches} heroes={heroes.data || []} demo={demo}/>
+        <MatchHistory key={`${demo}:${id}`} matches={data.matches} heroes={heroes.data || []} demo={demo} accountId={data.profile.account_id}/>
         <div className="data-note"><Clock3 size={14}/><span>{data.source} · Получено {new Date(data.fetched_at).toLocaleString('ru-RU')} · Кэш до 2 минут. Результаты и средние относятся к загруженной выборке. KDA = среднее (K+A)/max(1,D).</span></div>
       </>}
       {session.data && <div className="account-actions"><Link to="/privacy">Управление данными</Link><button onClick={() => setConfirmDelete(true)}><Trash2 size={13}/>Удалить аккаунт</button></div>}
