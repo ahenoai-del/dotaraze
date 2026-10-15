@@ -9,6 +9,7 @@ from app.core.errors import ServiceError
 from app.core.limits import ResponseCache
 from app.schemas.player import Dashboard, Profile
 from app.services.statistics import hero_statistics, normalize_match, summarize
+from app.services.matches import build_match
 
 
 class OpenDota:
@@ -64,6 +65,29 @@ class OpenDota:
                 raise ServiceError('upstream_format', 'OpenDota вернул неполные данные. Повторите позже.') from exc
             return result
         return await self.cache.get_or_load(f'player:{player_id}', load)
+
+    async def match(self, match_id: int):
+        async def load():
+            try:
+                raw = await self.get(f'/matches/{match_id}')
+            except ServiceError as exc:
+                if exc.code == 'profile_unavailable':
+                    raise ServiceError('match_unavailable', 'Матч не найден или недоступен в OpenDota.', 404) from exc
+                raise
+            if raw is None or isinstance(raw, dict) and raw.get('error'):
+                raise ServiceError('match_unavailable', 'Матч не найден или недоступен в OpenDota.', 404)
+            return build_match(raw, match_id, datetime.now(timezone.utc).isoformat())
+        return await self.cache.get_or_load(f'match:{match_id}', load)
+
+    async def items(self):
+        async def load():
+            rows = await self.get('/constants/items')
+            if not isinstance(rows, dict):
+                raise ServiceError('upstream_format', 'Справочник предметов недоступен.')
+            return [{'id': row['id'], 'name': row.get('dname') or name,
+                     'image': 'https://cdn.cloudflare.steamstatic.com' + row['img'] if isinstance(row.get('img'), str) and row['img'].startswith('/apps/dota2/') else None}
+                    for name, row in rows.items() if isinstance(row, dict) and type(row.get('id')) is int and row['id'] > 0]
+        return await self.cache.get_or_load('items', load)
 
     async def heroes(self):
         snapshot = await self.hero_stats_snapshot()
